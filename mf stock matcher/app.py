@@ -8,6 +8,7 @@ import logging
 import os
 import sys
 import time
+import uuid
 
 from flask import Flask, render_template, request, jsonify
 
@@ -34,6 +35,66 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
+_seen_visitors = set()
+_visit_count = 0
+
+
+def _client_ip():
+    """Resolve client IP behind Render proxy when possible."""
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if forwarded_for:
+        # X-Forwarded-For can be a comma-separated chain; leftmost is client.
+        return forwarded_for.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+
+def _visitor_id(ip_address):
+    user_agent = request.headers.get("User-Agent", "")
+    return f"{ip_address}|{user_agent[:120]}"
+
+
+def _log_event(event, **fields):
+    payload = {
+        "event": event,
+        "ts": int(time.time()),
+        **fields,
+    }
+    log.info(json.dumps(payload, default=str))
+
+
+@app.before_request
+def _before_request_analytics():
+    global _visit_count
+
+    request.start_time = time.time()
+    request.request_id = str(uuid.uuid4())[:8]
+
+    ip_address = _client_ip()
+    visitor = _visitor_id(ip_address)
+
+    _visit_count += 1
+    is_new_visitor = visitor not in _seen_visitors
+    if is_new_visitor:
+        _seen_visitors.add(visitor)
+
+    request.ip_address = ip_address
+    request.visitor = visitor
+
+    _log_event(
+        "request_started",
+        request_id=request.request_id,
+        method=request.method,
+        path=request.path,
+        query_params=dict(request.args),
+        ip=ip_address,
+        is_new_visitor=is_new_visitor,
+        unique_visitors=len(_seen_visitors),
+        total_visits=_visit_count,
+        user_agent=request.headers.get("User-Agent", "")[:180],
+        referer=request.headers.get("Referer", ""),
+    )
+
+
 @app.after_request
 def _add_headers(response):
     origin = request.headers.get("Origin", "")
@@ -42,11 +103,36 @@ def _add_headers(response):
         response.headers["Access-Control-Allow-Headers"] = "Content-Type"
         response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response.headers["X-Content-Type-Options"] = "nosniff"
+
+    duration_ms = None
+    if hasattr(request, "start_time"):
+        duration_ms = round((time.time() - request.start_time) * 1000, 2)
+
+    _log_event(
+        "request_completed",
+        request_id=getattr(request, "request_id", None),
+        method=request.method,
+        path=request.path,
+        status_code=response.status_code,
+        duration_ms=duration_ms,
+        ip=getattr(request, "ip_address", "unknown"),
+        unique_visitors=len(_seen_visitors),
+        total_visits=_visit_count,
+    )
+
     return response
 
 
 @app.errorhandler(Exception)
 def _handle_error(exc):
+    _log_event(
+        "request_failed",
+        request_id=getattr(request, "request_id", None),
+        method=request.method,
+        path=request.path,
+        ip=getattr(request, "ip_address", "unknown"),
+        error=str(exc),
+    )
     log.exception("Unhandled error")
     return jsonify({"error": "Something went wrong. Please try again."}), 500
 
@@ -105,6 +191,15 @@ def api_stock_search():
     if len(query) < 1:
         return jsonify([])
     results = search_stocks(query)
+
+    _log_event(
+        "stock_autocomplete_search",
+        request_id=getattr(request, "request_id", None),
+        ip=getattr(request, "ip_address", "unknown"),
+        query=query,
+        result_count=len(results),
+    )
+
     return jsonify(results)
 
 
@@ -142,6 +237,16 @@ def api_search():
 
     selected_symbols = selected_symbols[:30]
 
+    _log_event(
+        "portfolio_search_started",
+        request_id=getattr(request, "request_id", None),
+        ip=getattr(request, "ip_address", "unknown"),
+        selected_symbols=selected_symbols,
+        selected_count=len(selected_symbols),
+        category=data.get("category"),
+        max_funds=data.get("max_funds"),
+    )
+
     all_funds = [fund for fund in get_all_mutual_funds() if fund["holdings"]]
     if not all_funds:
         return jsonify({
@@ -176,6 +281,18 @@ def api_search():
 
     # Compute overlap data for top funds
     overlap = _compute_overlap(single_results[:10], selected_symbols)
+
+    _log_event(
+        "portfolio_search_completed",
+        request_id=getattr(request, "request_id", None),
+        ip=getattr(request, "ip_address", "unknown"),
+        selected_count=len(selected_symbols),
+        total_funds_scanned=len(funds),
+        top_single_fund=(single_results[0]["scheme_name"] if single_results else None),
+        top_single_match_count=(single_results[0]["matched_count"] if single_results else 0),
+        has_full_cover=has_full_cover,
+        bundle_count=len(bundles),
+    )
 
     return jsonify({
         "selected_stocks": selected_symbols,

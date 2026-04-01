@@ -5,11 +5,13 @@ services:
     runtime: python
     rootDir: mf stock matcher
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --access-logfile - --error-logfile - --capture-output
     envVars:
       - key: MF_SHARED_DATA_DIR
         value: /opt/render/project/src/shared-data
       - key: PYTHON_VERSION
         value: "3.11.0"
+      - key: PYTHONUNBUFFERED
+        value: "1"
     healthCheckPath: /health
     plan: free
