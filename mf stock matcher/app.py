@@ -286,6 +286,7 @@ def api_search():
         "portfolio_search_completed",
         request_id=getattr(request, "request_id", None),
         ip=getattr(request, "ip_address", "unknown"),
+        selected_symbols=selected_symbols,
         selected_count=len(selected_symbols),
         total_funds_scanned=len(funds),
         top_single_fund=(single_results[0]["scheme_name"] if single_results else None),
