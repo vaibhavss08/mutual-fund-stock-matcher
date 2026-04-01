@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MF Stock Matcher — Find Funds for Your Stocks</title>
+<meta name="description" content="Find the best Indian mutual funds that maximise exposure to your selected NSE stocks. Compare funds by coverage, exposure, and bundle strategies."/>
+<meta name="theme-color" content="#0a0a0f"/>
+<meta property="og:title" content="MF Stock Matcher"/>
+<meta property="og:description" content="Find mutual funds that maximise exposure to your selected stocks."/>
+<meta property="og:type" content="website"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a28;--bg4:#222236;
+  --text:#e4e4f0;--text2:#9898b0;--text3:#6868a0;
+  --accent:#6c5ce7;--accent2:#a29bfe;--accent-glow:rgba(108,92,231,.18);
+  --green:#00d2a0;--green-bg:rgba(0,210,160,.12);
+  --amber:#f0b429;--amber-bg:rgba(240,180,41,.12);
+  --red:#ff6b6b;--red-bg:rgba(255,107,107,.12);
+  --blue:#4ecdc4;--blue-bg:rgba(78,205,196,.12);
+  --border:#2a2a3e;--radius:12px;--radius-sm:8px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+a{color:var(--accent2);text-decoration:none}
+
+/* ── Hero ── */
+.hero{position:relative;padding:2.5rem 0 1.5rem;text-align:center;
+  background:linear-gradient(180deg,rgba(108,92,231,.08) 0%,transparent 100%);
+  border-bottom:1px solid var(--border)}
+.hero h1{font-size:2rem;font-weight:800;letter-spacing:-.02em;
+  background:linear-gradient(135deg,#fff,var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--text2);margin-top:.3rem;font-size:.95rem;font-weight:300}
+.stats-row{display:flex;justify-content:center;gap:2rem;margin-top:1rem;flex-wrap:wrap}
+.stat-pill{display:flex;align-items:center;gap:.4rem;background:var(--bg3);padding:.35rem .9rem;border-radius:20px;font-size:.78rem;color:var(--text2);border:1px solid var(--border)}
+.data-badge{text-align:center;font-size:.72rem;color:var(--text3);margin-top:.6rem;opacity:.8}
+.stat-pill b{color:var(--accent2);font-weight:600}
+
+/* ── Search Section ── */
+.search-section{max-width:720px;margin:1.5rem auto;padding:0 1.5rem}
+.search-box{position:relative}
+.search-box input{width:100%;padding:.85rem 1.2rem .85rem 2.8rem;background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:.95rem;outline:none;transition:border .2s,box-shadow .2s}
+.search-box input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.search-box input::placeholder{color:var(--text3)}
+.search-box .icon{position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text3);font-size:1rem}
+.autocomplete{position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:0 0 var(--radius) var(--radius);max-height:280px;overflow-y:auto;z-index:100;display:none}
+.autocomplete.show{display:block}
+.ac-item{padding:.65rem 1rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s}
+.ac-item:hover,.ac-item.active{background:var(--accent-glow)}
+.ac-item .sym{font-weight:600;color:var(--accent2);font-size:.88rem}
+.ac-item .name{color:var(--text2);font-size:.78rem;max-width:55%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-item .sector{font-size:.65rem;color:var(--text3);padding:.15rem .45rem;background:var(--bg4);border-radius:4px;margin-left:.5rem}
+
+/* ── Tags ── */
+.tags-area{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.75rem;min-height:1.5rem}
+.tag{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem;background:var(--accent-glow);border:1px solid rgba(108,92,231,.3);border-radius:20px;font-size:.78rem;font-weight:500;color:var(--accent2);cursor:default;animation:tagIn .2s ease}
+@keyframes tagIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+.tag .remove{cursor:pointer;opacity:.6;font-size:.7rem;margin-left:.15rem;transition:opacity .15s}
+.tag .remove:hover{opacity:1;color:var(--red)}
+
+/* ── Action bar ── */
+.action-bar{display:flex;justify-content:space-between;align-items:center;margin-top:.75rem;gap:.5rem;flex-wrap:wrap}
+.btn{padding:.55rem 1.4rem;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:.4rem}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#5b4bd6;transform:translateY(-1px);box-shadow:0 4px 16px rgba(108,92,231,.35)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--text2);color:var(--text)}
+.btn-sm{padding:.35rem .8rem;font-size:.75rem;border-radius:6px}
+.stock-count{font-size:.8rem;color:var(--text3)}
+
+/* ── Filter bar ── */
+.filter-bar{max-width:720px;margin:.5rem auto 0;padding:0 1.5rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.filter-bar select{background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:6px;padding:.35rem .6rem;font-size:.75rem;font-family:inherit;cursor:pointer;outline:none}
+.filter-bar select:focus{border-color:var(--accent)}
+.filter-label{font-size:.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+
+/* ── Results ── */
+.results{max-width:900px;margin:1.5rem auto;padding:0 1.5rem;display:none}
+.results.show{display:block}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;background:var(--bg3);border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:1.4rem;padding:4px}
+.tab{flex:1;padding:.65rem .5rem;text-align:center;font-size:.82rem;font-weight:600;color:var(--text3);cursor:pointer;transition:all .25s;position:relative;border-radius:10px;border-right:none}
+.tab:hover{color:var(--text2);background:rgba(255,255,255,.03)}
+.tab.active{color:var(--accent2);background:var(--bg2);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.tab.active::after{display:none}
+.tab .badge{display:inline-block;background:var(--bg4);padding:.12rem .5rem;border-radius:10px;font-size:.63rem;margin-left:.3rem;font-weight:700}
+.tab.active .badge{background:rgba(108,92,231,.3)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Summary bar */
+.summary-bar{display:flex;gap:.75rem;margin-bottom:1.2rem;flex-wrap:wrap}
+.summary-card{flex:1;min-width:130px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;text-align:center;transition:border-color .2s}
+.summary-card:hover{border-color:rgba(255,255,255,.08)}
+.summary-card .val{font-size:1.5rem;font-weight:700;color:var(--green);line-height:1.2}
+.summary-card .val.amber{color:var(--amber)}
+.summary-card .val.blue{color:var(--blue)}
+.summary-card .label{font-size:.68rem;color:var(--text3);margin-top:.2rem;text-transform:uppercase;letter-spacing:.05em}
+
+/* Fund cards */
+.fund-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.2rem;margin-bottom:.75rem;transition:border-color .2s,box-shadow .2s}
+.fund-card:hover{border-color:rgba(108,92,231,.3);box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.fund-card.top{border-color:rgba(0,210,160,.25);box-shadow:0 0 0 1px rgba(0,210,160,.08)}
+.fund-header{display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;flex-wrap:wrap}
+.fund-name{font-size:.9rem;font-weight:600;color:var(--text);line-height:1.3}
+.fund-meta{display:flex;gap:.5rem;margin-top:.3rem;flex-wrap:wrap}
+.fund-meta span{font-size:.68rem;padding:.15rem .5rem;border-radius:4px;font-weight:500}
+.meta-cat{background:var(--accent-glow);color:var(--accent2)}
+.meta-amc{background:rgba(255,255,255,.04);color:var(--text3)}
+.meta-aum{background:var(--blue-bg);color:var(--blue)}
+.meta-risk{background:var(--amber-bg);color:var(--amber)}
+.fund-stats{display:flex;gap:1.2rem;margin-top:.6rem;flex-wrap:wrap}
+.fund-stat{display:flex;flex-direction:column;align-items:center}
+.fund-stat .v{font-size:1.1rem;font-weight:700}
+.fund-stat .l{font-size:.62rem;color:var(--text3);text-transform:uppercase;margin-top:.1rem}
+.coverage-bar{height:4px;background:var(--bg4);border-radius:2px;margin-top:.6rem;overflow:hidden}
+.coverage-fill{height:100%;border-radius:2px;transition:width .5s ease}
+
+/* Holdings chips */
+.holdings-row{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.5rem}
+.h-chip{font-size:.65rem;padding:.18rem .45rem;border-radius:4px;font-weight:500}
+.h-chip.match{background:var(--green-bg);color:var(--green);border:1px solid rgba(0,210,160,.2)}
+.h-chip.other{background:rgba(255,255,255,.03);color:var(--text3);border:1px solid rgba(255,255,255,.05)}
+
+/* ── Bundle Cards ── */
+.bundle{background:var(--bg2);border:1px solid var(--border);border-radius:16px;margin-bottom:1.8rem;overflow:hidden;position:relative;transition:transform .2s,box-shadow .2s}
+.bundle:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.bundle::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0}
+
+/* Strategy themes */
+.bundle.theme-balanced::before{background:linear-gradient(90deg,#00d2a0,#00e6b0)}
+.bundle.theme-balanced{border-color:rgba(0,210,160,.2)}
+.bundle.theme-balanced .bundle-icon{background:linear-gradient(135deg,rgba(0,210,160,.2),rgba(0,210,160,.05));color:#00d2a0}
+.bundle.theme-balanced .strategy-tag{background:rgba(0,210,160,.12);color:#00d2a0;border:1px solid rgba(0,210,160,.2)}
+
+.bundle.theme-exposure::before{background:linear-gradient(90deg,#6c5ce7,#a29bfe)}
+.bundle.theme-exposure{border-color:rgba(108,92,231,.2)}
+.bundle.theme-exposure .bundle-icon{background:linear-gradient(135deg,rgba(108,92,231,.2),rgba(108,92,231,.05));color:#a29bfe}
+.bundle.theme-exposure .strategy-tag{background:rgba(108,92,231,.12);color:#a29bfe;border:1px solid rgba(108,92,231,.2)}
+
+.bundle.theme-compact::before{background:linear-gradient(90deg,#4ecdc4,#45b7aa)}
+.bundle.theme-compact{border-color:rgba(78,205,196,.2)}
+.bundle.theme-compact .bundle-icon{background:linear-gradient(135deg,rgba(78,205,196,.2),rgba(78,205,196,.05));color:#4ecdc4}
+.bundle.theme-compact .strategy-tag{background:rgba(78,205,196,.12);color:#4ecdc4;border:1px solid rgba(78,205,196,.2)}
+
+.bundle-head{padding:1.2rem 1.4rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(255,255,255,.015) 0%,transparent 100%)}
+.bundle-head-left{display:flex;align-items:center;gap:.85rem}
+.bundle-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.bundle-title-group{display:flex;flex-direction:column;gap:.2rem}
+.bundle-strategy{font-size:.95rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:.5rem}
+.strategy-tag{padding:.15rem .55rem;border-radius:6px;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.bundle-desc{font-size:.74rem;color:var(--text3);font-weight:400}
+.bundle-stats{display:flex;gap:.6rem}
+.bundle-stat{text-align:center;background:var(--bg3);padding:.5rem .7rem;border-radius:10px;min-width:68px}
+.bundle-stat .v{font-size:1.15rem;font-weight:700;line-height:1.2}
+.bundle-stat .l{font-size:.58rem;color:var(--text3);text-transform:uppercase;letter-spacing:.03em;margin-top:.1rem}
+.bundle-body{padding:1.2rem 1.4rem}
+.bundle-funds{display:flex;flex-direction:column;gap:.5rem}
+.bundle-fund{background:var(--bg3);border:1px solid rgba(255,255,255,.04);border-radius:10px;padding:.75rem 1rem;transition:border-color .2s}
+.bundle-fund:hover{border-color:rgba(255,255,255,.08)}
+.bundle-fund .bf-name{font-size:.84rem;font-weight:600;color:var(--text)}
+.bundle-fund .bf-meta{font-size:.66rem;color:var(--text3);margin-top:.2rem;display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}
+.bundle-fund .bf-meta span{opacity:.7}
+.alloc-badge{background:rgba(108,92,231,.18);color:var(--accent2);border:1px solid rgba(108,92,231,.3);border-radius:5px;padding:.15rem .45rem;font-size:.66rem;font-weight:700;opacity:1!important}
+.bundle-coverage-map{margin-top:.7rem;display:flex;flex-wrap:wrap;gap:.35rem}
+.cov-chip{font-size:.64rem;padding:.2rem .5rem;border-radius:5px;font-weight:600;letter-spacing:.01em}
+.cov-chip.covered{background:var(--green-bg);color:var(--green);border:1px solid rgba(0,210,160,.15)}
+.cov-chip.missing{background:var(--red-bg);color:var(--red);border:1px solid rgba(255,107,107,.15)}
+
+/* Per-stock exposure bars */
+.pse-section{margin-top:1rem;padding-top:.85rem;border-top:1px solid var(--border)}
+.pse-title{font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:.55rem}
+.pse-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem}
+.pse-sym{width:90px;font-size:.74rem;font-weight:600;color:var(--text2);flex-shrink:0}
+.pse-track{flex:1;height:10px;background:var(--bg4);border-radius:5px;overflow:hidden}
+.pse-fill{height:100%;border-radius:5px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.pse-val{width:55px;text-align:right;font-size:.74rem;font-weight:700;flex-shrink:0}
+
+/* ── Overlap Tab ── */
+.overlap-table{width:100%;border-collapse:collapse;font-size:.75rem}
+.overlap-table th{text-align:left;padding:.5rem;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg2)}
+.overlap-table td{padding:.4rem .5rem;border-bottom:1px solid rgba(255,255,255,.03)}
+.overlap-table tr:hover{background:rgba(255,255,255,.02)}
+.ov-weight{font-weight:600;color:var(--green);font-size:.7rem}
+.ov-empty{color:var(--text3)}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* ── Responsive ── */
+@media(max-width:640px){
+  .hero h1{font-size:1.4rem}
+  .stats-row{gap:.8rem}
+  .summary-bar{flex-direction:column}
+  .fund-header{flex-direction:column}
+  .bundle-head{flex-direction:column;align-items:flex-start}
+  .bundle-head-left{flex-direction:column;gap:.4rem}
+  .bundle-stats{flex-wrap:wrap}
+  .bundle-stat{min-width:60px;padding:.4rem .5rem}
+}
+
+/* ── Loading ── */
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--accent-glow);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay{display:none;justify-content:center;align-items:center;padding:3rem;flex-direction:column;gap:.8rem}
+.loading-overlay.show{display:flex}
+.loading-overlay p{color:var(--text3);font-size:.85rem}
+
+/* No results */
+.no-results{text-align:center;padding:3rem;color:var(--text3)}
+.no-results .icon{font-size:2rem;margin-bottom:.5rem}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>MF Stock Matcher</h1>
+  <p>Find Indian mutual funds that maximise exposure to your selected stocks</p>
+  <div class="stats-row">
+    <div class="stat-pill">&#128200; <b id="statStocks">—</b> stocks</div>
+    <div class="stat-pill">&#127968; <b id="statFunds">—</b> funds</div>
+    <div class="stat-pill">&#127959; <b id="statCats">—</b> categories</div>
+  </div>
+  <div class="data-badge" id="dataBadge" style="display:none"></div>
+</div>
+
+<!-- SEARCH -->
+<div class="search-section">
+  <div class="search-box">
+    <span class="icon">&#128269;</span>
+    <input type="text" id="searchInput" placeholder="Search stocks by name or symbol..." autocomplete="off"/>
+    <div class="autocomplete" id="autocomplete"></div>
+  </div>
+  <div class="tags-area" id="tagsArea"></div>
+  <div class="action-bar">
+    <span class="stock-count" id="stockCount"></span>
+    <div style="display:flex;gap:.4rem">
+      <button class="btn btn-ghost btn-sm" id="clearBtn" style="display:none" onclick="clearAll()">Clear All</button>
+      <button class="btn btn-primary" id="searchBtn" disabled onclick="doSearch()">
+        Find Matching Funds
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filter-bar" id="filterBar">
+  <span class="filter-label">Category:</span>
+  <select id="catFilter"><option value="">All Categories</option></select>
+  <span style="width:1px;height:20px;background:var(--border);margin:0 .3rem"></span>
+  <span class="filter-label">Max Funds:</span>
+  <div style="display:flex;align-items:center;gap:.5rem">
+    <input type="range" id="maxFundsSlider" min="0" max="5" value="0" style="width:90px;accent-color:var(--accent)" oninput="updateMaxFundsLabel()"/>
+    <span id="maxFundsLabel" style="font-size:.78rem;color:var(--text2);min-width:36px">Auto</span>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <p>Scanning <span id="scanCount">--</span> mutual funds...</p>
+</div>
+
+<!-- RESULTS -->
+<div class="results" id="results">
+  <div class="summary-bar" id="summaryBar"></div>
+  <div class="tabs" id="tabsBar">
+    <div class="tab active" data-tab="bundles" onclick="switchTab('bundles')">&#128230; Optimal Bundles <span class="badge" id="bundleBadge">0</span></div>
+    <div class="tab" data-tab="singles" onclick="switchTab('singles')">&#11088; Best Single Funds <span class="badge" id="singleBadge">0</span></div>
+    <div class="tab" data-tab="overlap" onclick="switchTab('overlap')">&#128200; Stock Overlap <span class="badge" id="overlapBadge">0</span></div>
+  </div>
+
+  <div class="tab-panel active" id="panel-bundles"></div>
+  <div class="tab-panel" id="panel-singles"></div>
+  <div class="tab-panel" id="panel-overlap"></div>
+</div>
+
+<script>
+const selectedStocks = new Set();
+let acIdx = -1;
+let metaData = null;
+
+function displayDate(value) {
+  if (!value) return '';
+  if (/^\d{2}-\d{2}-\d{4}$/.test(value)) {
+    const [day, month, year] = value.split('-');
+    return new Date(year + '-' + month + '-' + day).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'});
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'});
+}
+
+// ── Init ──
+(async function init() {
+  const res = await fetch('/api/meta');
+  metaData = await res.json();
+  document.getElementById('statStocks').textContent = metaData.total_stocks;
+  document.getElementById('statFunds').textContent = metaData.total_funds;
+  document.getElementById('statCats').textContent = metaData.categories.length;
+  // Data-source badge
+  const ds = metaData.data_source;
+  if (ds) {
+    const badge = document.getElementById('dataBadge');
+    const dt = displayDate(ds.fetched_at);
+    const ht = ds.holdings && ds.holdings.as_of ? displayDate(ds.holdings.as_of) : '';
+    const holdingsLabel = ds.holdings && ds.holdings.fund_count
+      ? ds.holdings.source + ' (' + ds.holdings.fund_count + ' funds)'
+      : 'not imported';
+    badge.style.display = 'block';
+  }
+  const sel = document.getElementById('catFilter');
+  metaData.categories.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  });
+})();
+
+// ── Autocomplete ──
+const searchInput = document.getElementById('searchInput');
+const acBox = document.getElementById('autocomplete');
+let acTimer;
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(acTimer);
+  acTimer = setTimeout(fetchAC, 150);
+});
+
+searchInput.addEventListener('keydown', e => {
+  const items = acBox.querySelectorAll('.ac-item');
+  if (e.key === 'ArrowDown') { e.preventDefault(); acIdx = Math.min(acIdx + 1, items.length - 1); highlightAC(items); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); acIdx = Math.max(acIdx - 1, 0); highlightAC(items); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (acIdx >= 0 && items[acIdx]) items[acIdx].click(); else if (items.length) items[0].click(); }
+  else if (e.key === 'Escape') { closeAC(); }
+});
+
+document.addEventListener('click', e => { if (!e.target.closest('.search-box')) closeAC(); });
+
+async function fetchAC() {
+  const q = searchInput.value.trim();
+  if (q.length < 1) { closeAC(); return; }
+  const res = await fetch('/api/stocks/search?q=' + encodeURIComponent(q));
+  const data = await res.json();
+  acBox.innerHTML = '';
+  acIdx = -1;
+  if (!data.length) { closeAC(); return; }
+  data.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'ac-item';
+    d.innerHTML = '<span class="sym">' + esc(s.symbol) + '</span><span class="name">' + esc(s.name) + '</span><span class="sector">' + esc(s.sector) + '</span>';
+    d.addEventListener('click', () => addStock(s.symbol));
+    acBox.appendChild(d);
+  });
+  acBox.classList.add('show');
+}
+
+function highlightAC(items) {
+  items.forEach((el, i) => el.classList.toggle('active', i === acIdx));
+  if (items[acIdx]) items[acIdx].scrollIntoView({ block: 'nearest' });
+}
+
+function closeAC() { acBox.classList.remove('show'); acIdx = -1; }
+
+// ── Tag Management ──
+function addStock(sym) {
+  if (selectedStocks.has(sym)) { closeAC(); searchInput.value = ''; return; }
+  selectedStocks.add(sym);
+  renderTags();
+  searchInput.value = '';
+  closeAC();
+  searchInput.focus();
+}
+
+function removeStock(sym) {
+  selectedStocks.delete(sym);
+  renderTags();
+}
+
+function clearAll() {
+  selectedStocks.clear();
+  renderTags();
+  document.getElementById('results').classList.remove('show');
+}
+
+function renderTags() {
+  const area = document.getElementById('tagsArea');
+  area.innerHTML = '';
+  selectedStocks.forEach(sym => {
+    const t = document.createElement('span');
+    t.className = 'tag';
+    t.innerHTML = esc(sym) + ' <span class="remove" onclick="removeStock(\'' + sym + '\')">&#10005;</span>';
+    area.appendChild(t);
+  });
+  const n = selectedStocks.size;
+  document.getElementById('stockCount').textContent = n ? n + ' stock' + (n > 1 ? 's' : '') + ' selected' : '';
+  document.getElementById('searchBtn').disabled = n === 0;
+  document.getElementById('clearBtn').style.display = n ? '' : 'none';
+}
+
+function updateMaxFundsLabel() {
+  const slider = document.getElementById('maxFundsSlider');
+  const label = document.getElementById('maxFundsLabel');
+  const v = parseInt(slider.value);
+  label.textContent = v === 0 ? 'Auto' : v;
+}
+
+// ── Search ──
+async function doSearch() {
+  if (!selectedStocks.size) return;
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Searching...';
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('scanCount').textContent = metaData ? metaData.verified_funds : '--';
+
+  const cat = document.getElementById('catFilter').value;
+  const maxFunds = parseInt(document.getElementById('maxFundsSlider').value);
+  const body = { stocks: Array.from(selectedStocks) };
+  if (cat) body.category = cat;
+  if (maxFunds > 0) body.max_funds = maxFunds;
+
+  try {
+    const res = await fetch('/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    renderResults(data);
+  } catch (e) {
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Find Matching Funds';
+    document.getElementById('loading').classList.remove('show');
+  }
+}
+
+// ── Render Results ──
+function renderResults(data) {
+  const r = document.getElementById('results');
+  r.classList.add('show');
+
+  // Summary
+  const bestCoverage = data.single_funds.length ? data.single_funds[0].coverage : 0;
+  const bestExposure = data.single_funds.length ? data.single_funds[0].total_exposure : 0;
+  const bundleCovStr = data.bundles.length ? data.bundles[0].total_coverage : 0;
+  document.getElementById('summaryBar').innerHTML =
+    '<div class="summary-card"><div class="val blue">' + data.total_funds_scanned + '</div><div class="label">Funds Scanned</div></div>' +
+    '<div class="summary-card"><div class="val">' + data.single_funds.length + '</div><div class="label">Matching Funds</div></div>' +
+    '<div class="summary-card"><div class="val' + (bestCoverage === 100 ? '' : ' amber') + '">' + bestCoverage + '%</div><div class="label">Best Single Coverage</div></div>' +
+    '<div class="summary-card"><div class="val' + (bundleCovStr === 100 ? '' : ' amber') + '">' + bundleCovStr + '%</div><div class="label">Best Bundle Coverage</div></div>' +
+    (data.warning ? '<div class="summary-card" style="max-width:100%"><div class="label" style="line-height:1.45">' + esc(data.warning) + '</div></div>' : '');
+
+  // Badges
+  document.getElementById('bundleBadge').textContent = data.bundles.length;
+  document.getElementById('singleBadge').textContent = data.single_funds.length;
+  document.getElementById('overlapBadge').textContent = data.selected_stocks.length;
+
+  // Bundles
+  renderBundles(data);
+
+  // Singles
+  renderSingles(data);
+
+  // Overlap
+  renderOverlap(data);
+
+  // Show bundles tab by default
+  switchTab('bundles');
+}
+
+function renderBundles(data) {
+  const panel = document.getElementById('panel-bundles');
+  if (!data.bundles.length) {
+    const msg = data.warning || 'No bundles found. Try adding different stocks.';
+    panel.innerHTML = '<div class="no-results"><div class="icon">&#128230;</div><p>' + esc(msg) + '</p></div>';
+    return;
+  }
+
+  const themes = {
+    'Balanced Exposure':      { cls: 'theme-balanced', icon: '&#9878;',  tag: 'RECOMMENDED' },
+    'Maximum Exposure':       { cls: 'theme-exposure', icon: '&#9889;',  tag: 'MAX POWER' },
+    'Most Compact':           { cls: 'theme-compact',  icon: '&#11088;', tag: 'COMPACT' },
+  };
+
+  let html = '';
+  data.bundles.forEach((b, i) => {
+    const th = themes[b.strategy] || { cls: 'theme-balanced', icon: '&#128230;', tag: '' };
+    html += '<div class="bundle ' + th.cls + '">';
+
+    // Header
+    html += '<div class="bundle-head">';
+    html += '<div class="bundle-head-left">';
+    html += '<div class="bundle-icon">' + th.icon + '</div>';
+    html += '<div class="bundle-title-group">';
+    html += '<div class="bundle-strategy">' + esc(b.strategy) + '<span class="strategy-tag">' + th.tag + '</span></div>';
+    html += '<div class="bundle-desc">' + esc(b.description) + '</div>';
+    html += '</div></div>';
+
+    // Stats pills
+    html += '<div class="bundle-stats">';
+    html += '<div class="bundle-stat"><div class="v" style="color:var(--green)">' + b.total_coverage + '%</div><div class="l">Coverage</div></div>';
+    html += '<div class="bundle-stat"><div class="v" style="color:var(--accent2)">' + b.total_exposure + '%</div><div class="l">Total Exp</div></div>';
+    const minC = (b.min_stock_exposure||0) >= 3 ? 'var(--green)' : (b.min_stock_exposure||0) >= 1 ? 'var(--amber)' : 'var(--red)';
+    html += '<div class="bundle-stat"><div class="v" style="color:' + minC + '">' + (b.min_stock_exposure||0) + '%</div><div class="l">Min Stock</div></div>';
+    html += '<div class="bundle-stat"><div class="v" style="color:var(--blue)">' + b.funds.length + '</div><div class="l">Funds</div></div>';
+    html += '</div></div>';
+
+    // Body
+    html += '<div class="bundle-body">';
+
+    // Per-stock exposure breakdown (shown first for prominence)
+    if (b.per_stock_exposure && b.per_stock_exposure.length) {
+      html += '<div class="pse-section" style="border-top:none;margin-top:0;padding-top:0;margin-bottom:1rem">';
+      html += '<div class="pse-title">Per-Stock Exposure</div>';
+      const maxE = Math.max(...b.per_stock_exposure.map(p => p.exposure), 1);
+      b.per_stock_exposure.forEach(p => {
+        const pct = Math.min(100, (p.exposure / maxE) * 100);
+        const c = p.exposure >= 3 ? 'var(--green)' : p.exposure >= 1 ? 'var(--amber)' : 'var(--red)';
+        html += '<div class="pse-row">';
+        html += '<span class="pse-sym">' + esc(p.symbol) + '</span>';
+        html += '<div class="pse-track"><div class="pse-fill" style="width:' + pct + '%;background:' + c + '"></div></div>';
+        html += '<span class="pse-val" style="color:' + c + '">' + p.exposure + '%</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    // Fund cards
+    html += '<div class="bundle-funds">';
+    b.funds.forEach(f => {
+      html += '<div class="bundle-fund">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+      html += '<div class="bf-name">' + esc(f.scheme_name) + '</div>';
+      if (f.allocation_pct != null) {
+        html += '<span class="alloc-badge">' + f.allocation_pct + '% of portfolio</span>';
+      }
+      html += '</div>';
+      html += '<div class="bf-meta"><span>' + esc(f.category) + '</span><span>&middot;</span><span>' + esc(f.amc) + '</span>';
+      if (f.aum_cr) html += '<span>&middot;</span><span>&#8377;' + formatAUM(f.aum_cr) + ' Cr</span>';
+      html += '</div>';
+      html += '<div class="holdings-row">';
+      f.matched_stocks.forEach(m => {
+        html += '<span class="h-chip match">' + esc(m.symbol) + ' ' + m.weight + '%</span>';
+      });
+      html += '</div></div>';
+    });
+    html += '</div>';
+
+    // Coverage map
+    html += '<div class="bundle-coverage-map">';
+    b.stocks_covered.forEach(s => { html += '<span class="cov-chip covered">&#10003; ' + esc(s) + '</span>'; });
+    b.stocks_missing.forEach(s => { html += '<span class="cov-chip missing">&#10007; ' + esc(s) + '</span>'; });
+    html += '</div>';
+
+    html += '</div></div>';
+  });
+  panel.innerHTML = html;
+}
+
+function renderSingles(data) {
+  const panel = document.getElementById('panel-singles');
+  if (!data.single_funds.length) {
+    const msg = data.warning || 'No matching funds found.';
+    panel.innerHTML = '<div class="no-results"><div class="icon">&#11088;</div><p>' + esc(msg) + '</p></div>';
+    return;
+  }
+  let html = '';
+  data.single_funds.forEach((f, i) => {
+    const isTop = i < 3;
+    const covColor = f.coverage >= 100 ? 'var(--green)' : f.coverage >= 60 ? 'var(--amber)' : 'var(--red)';
+    html += '<div class="fund-card' + (isTop ? ' top' : '') + '">';
+    html += '<div class="fund-header"><div>';
+    html += '<div class="fund-name">' + (isTop ? '&#127942; ' : '') + '#' + (i + 1) + ' ' + esc(f.scheme_name) + '</div>';
+    html += '<div class="fund-meta">';
+    html += '<span class="meta-cat">' + esc(f.category) + '</span>';
+    html += '<span class="meta-amc">' + esc(f.amc) + '</span>';
+    if (f.aum_cr) html += '<span class="meta-aum">&#8377;' + formatAUM(f.aum_cr) + ' Cr</span>';
+    html += '</div></div>';
+    html += '<div class="fund-stats">';
+    html += '<div class="fund-stat"><div class="v" style="color:' + covColor + '">' + f.coverage + '%</div><div class="l">Coverage</div></div>';
+    html += '<div class="fund-stat"><div class="v" style="color:var(--accent2)">' + f.total_exposure + '%</div><div class="l">Exposure</div></div>';
+    html += '<div class="fund-stat"><div class="v">' + f.matched_count + '/' + f.total_stocks + '</div><div class="l">Matched</div></div>';
+    html += '</div></div>';
+    html += '<div class="coverage-bar"><div class="coverage-fill" style="width:' + f.coverage + '%;background:' + covColor + '"></div></div>';
+    html += '<div class="holdings-row">';
+    f.matched_stocks.forEach(m => {
+      html += '<span class="h-chip match">' + esc(m.symbol) + ' ' + m.weight + '%</span>';
+    });
+    // Show first few non-matched
+    const matchedSet = new Set(f.matched_stocks.map(m => m.symbol));
+    let otherCount = 0;
+    f.all_holdings.forEach(h => {
+      if (!matchedSet.has(h.symbol) && otherCount < 5) {
+        html += '<span class="h-chip other">' + esc(h.symbol) + '</span>';
+        otherCount++;
+      }
+    });
+    if (f.all_holdings.length - f.matched_count > 5) {
+      html += '<span class="h-chip other">+' + (f.all_holdings.length - f.matched_count - 5) + ' more</span>';
+    }
+    html += '</div></div>';
+  });
+  panel.innerHTML = html;
+}
+
+function renderOverlap(data) {
+  const panel = document.getElementById('panel-overlap');
+  if (!data.overlap_matrix || !Object.keys(data.overlap_matrix).length) {
+    const msg = data.warning || 'No overlap data.';
+    panel.innerHTML = '<div class="no-results"><div class="icon">&#128200;</div><p>' + esc(msg) + '</p></div>';
+    return;
+  }
+  // Collect fund names
+  const fundNames = [];
+  const fundSet = new Set();
+  Object.values(data.overlap_matrix).forEach(arr => {
+    arr.forEach(f => { if (!fundSet.has(f.fund)) { fundSet.add(f.fund); fundNames.push(f.fund); } });
+  });
+
+  let html = '<div style="overflow-x:auto"><table class="overlap-table"><thead><tr>';
+  html += '<th>Stock</th>';
+  fundNames.forEach(fn => {
+    const short = fn.length > 25 ? fn.substring(0, 22) + '...' : fn;
+    html += '<th title="' + esc(fn) + '">' + esc(short) + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  data.selected_stocks.forEach(sym => {
+    html += '<tr><td><strong>' + esc(sym) + '</strong></td>';
+    const fundMap = {};
+    (data.overlap_matrix[sym] || []).forEach(f => { fundMap[f.fund] = f.weight; });
+    fundNames.forEach(fn => {
+      if (fundMap[fn] !== undefined) {
+        html += '<td><span class="ov-weight">' + fundMap[fn] + '%</span></td>';
+      } else {
+        html += '<td><span class="ov-empty">-</span></td>';
+      }
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  panel.innerHTML = html;
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+}
+
+function formatAUM(v) {
+  if (v >= 1000) return (v / 1000).toFixed(1) + 'K';
+  return v.toFixed(0);
+}
+
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>
+
+<footer style="text-align:center;padding:2rem 1rem;color:var(--text3);font-size:.72rem;border-top:1px solid var(--border);margin-top:3rem">
+  <div style="display:flex;justify-content:center;align-items:center;gap:1.5rem;flex-wrap:wrap">
+    <span>MF Stock Matcher</span>
+    <span style="opacity:.4">·</span>
+    <span>926 NSE stocks &nbsp;·&nbsp; 544 mutual funds</span>
+    <span style="opacity:.4">·</span>
+    <span>Data via Rupeevest &amp; AMFI</span>
+  </div>
+  <div style="margin-top:.4rem;opacity:.5">Holdings data is periodically refreshed — for research purposes only, not investment advice.</div>
+</footer>
+</body>
+</html>
